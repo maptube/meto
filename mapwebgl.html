@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title></title>
+    <script type="text/javascript" src="http://maps.google.com/maps/api/js"></script>
+    <script type="text/javascript" src="js/jQuery/jquery-1.11.2.js"></script>
+    <!--<script type="text/javascript" src="js/jQuery/jquery-ui-1.11.2/jquery-ui.js"></script>-->
+    <script type="text/javascript" src="js/mrdoob-three.js-r71-0-gf73593b/build/three.js"></script>
+    <script type="text/javascript" src="MapTubeWebGLOverlay.js"></script>
+	<script type="text/javascript" src="MapTubeMetoSynopOverlay.js"></script>
+    <!--<link href="css/style.css" rel="stylesheet" type="text/css"/>-->
+	<style>
+	html, body, #map {
+        height: 100%;
+        margin: 0px;
+        padding: 0px
+      }
+	</style>
+
+    <script>
+        var map;
+        var centreLat = 52.0, centreLon = 0.0;
+        var initialZoom = 6;
+        var overlay;
+        var cube;
+
+        function initializeMap() {
+            var latlng = new google.maps.LatLng(centreLat, centreLon);
+            var myOptions = {
+                zoom: initialZoom, center: latlng,
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+            map = new google.maps.Map(document.getElementById("map"), myOptions);
+
+            //overlay = new MapTube.WGLOverlay(map);
+			overlay = new MapTube.Meto.SynopOverlay(map);
+			//Location i="3772" lat="51.479" lon="-0.449" name="HEATHROW"
+			//<Rep D="SW" G="29" P="1005" S="17" T="15.0" V="5000">780</Rep>
+			//Location i="3803" lat="49.913" lon="-6.301" name="SCILLY ST MARYS"
+			//<Rep D="SSW" G="38" P="1002" S="29" T="15.5" V="18000" W="7">780</Rep>
+			overlay.initialiseRendererEvent = function () {
+				//this.addSynops( [
+				//	MapTube.MetoSynopRecord(3772,51.479,-0.449,"HEATHROW",225,17),
+				//	MapTube.MetoSynopRecord(3808,49.913,-6.301,"SCILLY ST MARYS",200,29)
+				//]);
+				var outer_ob = this;
+				$.ajax({
+					//url: 'storm-2728Oct2013-dp-cache/syn/syn_2013-10-27T120000Z.xml',
+					//url: 'storm-2728Oct2013-dp-cache/syn/syn_2013-10-28T070000Z.xml',
+					url: 'test/synops_20150412_100000Z.xml',
+					dataType: 'xml',
+					success: function(data){
+						var synops = []; //list to add data to
+						// Extract relevant data from XML
+						var $xml_node = $('DV',data);
+						//console.log( xml_node.find('Page[Name="test"] > controls > test').text() );
+						//var lat = xml_node
+						$xml_node.find("Location").each(function(loc){
+							var iii = $(this).attr('i');
+							var lat = $(this).attr('lat');
+							var lon = $(this).attr('lon');
+							var name = $(this).attr('name');
+							console.log("Location",iii,lat,lon,name);
+							var rep = $(this).find('Rep');
+							var D=rep.attr('D'); //wind dir NSEW
+							var windDir = 0;
+							if (D) windDir = MapTube.Meto.Converters.CompassPointToBearing(D);
+							var P=rep.attr('P'); //mslp hpa
+							var S=rep.attr('S'); //wind speed in mph
+							var windSpeed = 0;
+							if (S) windSpeed = MapTube.Meto.Converters.MilesPerHourToKnots(S);
+							var T=rep.attr('T'); //air temp in C
+							var V=rep.attr('V'); //visibility in metres
+							var W=rep.attr('W'); //present wx
+							//use present weather code for the total cloud figure which is missing from datapoint data
+							//from: http://www.metoffice.gov.uk/datapoint/support/documentation/code-definitions
+							var totalCloud=0;
+							if (W) {
+								var ww=parseInt(W);
+								switch (ww) {
+								case 0: totalCloud=0; break;
+								case 3: totalCloud=1; break; //partly cloudy
+								case 5: totalCloud=8; break; //mist
+								case 6: totalCloud=8; break; //fog
+								case 7: totalCloud=2; break; //cloudy
+								case 8: totalCloud=8; break; //overcast
+								case 10: totalCloud=2; break; //light rain shower
+								case 11: totalCloud=3; break; //drizzle
+								case 12: totalCloud=4; break; //light rain
+								case 14: totalCloud=5; break; //heavy rain shower
+								case 15: totalCloud=6; break; //heavy rain
+								case 17: totalCloud=4; break; //sleet shower
+								case 18: totalCloud=6; break; //sleet
+								case 20: totalCloud=4; break; //hail shower
+								case 21: totalCloud=6; break; //hail
+								case 23: totalCloud=4; break; //light snow shower
+								case 24: totalCloud=6; break; //light snow
+								case 26: totalCloud=7; break; //heavy snow shower
+								case 27: totalCloud=8; break; //heavy snow
+								case 28: totalCloud=7; break; //thunder shower
+								case 30: totalCloud=8; break; //thunder
+								}
+							}
+							var synop = MapTube.Meto.SynopRecord(iii,lat,lon,name,totalCloud,windDir,windSpeed);
+							console.log("winddir",D,windDir,"totalCloud",totalCloud,W);
+							synops.push(synop);
+						});
+						outer_ob.addSynops(synops); //and add all the synops to the display buffers
+					},
+					error: function(data){
+						console.log('Error loading XML data');
+					}
+				});
+
+			}
+        }
+
+        google.maps.event.addDomListener(window, 'load', initializeMap);
+
+    </script>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+    </script>
+
+    
+</body>
+</html>

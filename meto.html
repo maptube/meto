@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>MetOffice DataPoint Viewer</title>
+    <script type="text/javascript" src="http://maps.google.com/maps/api/js"></script>
+    <!--<script type="text/javascript" src="js/jQuery/jquery-1.11.1.js"></script>-->
+    <!--<script type="text/javascript" src="js/jQuery/jquery-ui-1.11.2/jquery-ui.js"></script>-->
+    <!--<script type="text/javascript" src="js/mrdoob-three.js-r70-74e7d09/build/three.js"></script>-->
+    <!--<link href="css/style.css" rel="stylesheet" type="text/css"/>-->
+	<script type="text/javascript" src="MapTubeImageOverlay.js"></script>
+</head>
+<body>
+<script>
+
+
+//Don't need this for archive data! var APIKey = "4b072cc5-a6bf-4d50-984f-b01c3907e78c";
+var DataRoot = "storm-2728Oct2013-dp-cache/";
+var RadarRoot = DataRoot + "RADAR_UK_Composite_Highres/";
+//these are the bounds for all the UKMO map products
+var bounds = new google.maps.LatLngBounds(new google.maps.LatLng(48, -12), new google.maps.LatLng(61, 5));
+var StartTime = new Date(2013,9,27,13,15,0,0); //NOTE month 9 is October!
+var EndTime = new Date(2013,9,28,16,45,0,0);
+
+        var map;
+        var centreLat = 52.0, centreLon = 0.0;
+        var initialZoom = 6;
+        var overlay;
+		var rainfallRadarOverlay;
+		
+		/////////////////////////////////////////////////////////////////
+		
+		function myanimate() {
+			//var t = radarImageOverlay.timeStep;
+			//t=(t+1)%radarImageOverlay.times.length;
+			//radarImageOverlay.setTimeStep(t);
+			
+			//console.log("in animate");
+			var d = radarImageOverlay.getFrameTime();
+			d = addMinutes(d,15);
+			radarImageOverlay.setFrameTime(d);
+			document.getElementById("radardatetime").innerHTML=d;
+		}
+		
+		
+		/////////////////////////////////////////////////////////////////
+
+		//pad an integer to 2 digits with a leading zero if required
+		function pad2(i) {
+			if (i<10) return "0"+i;
+			return i;
+		}
+		
+		//add "minutes" minutes to a date time and return it
+		function addMinutes(date, minutes) {
+			return new Date(date.getTime() + minutes*60000);
+		}
+		
+		function initializeMap() {
+            var latlng = new google.maps.LatLng(centreLat, centreLon);
+            var myOptions = {
+                zoom: initialZoom, center: latlng,
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+            map = new google.maps.Map(document.getElementById("map"), myOptions);
+
+            //overlay = new MapTubeWMTSMapType(map);
+			//overlay.baseUrl = RadarRequest;
+			//map.overlayMapTypes.insertAt(0,overlay);
+			//map.overlayMapTypes.insertAt(0, new CoordMapType(new google.maps.Size(256, 256)));
+
+			
+			//var src = "http://datapoint.metoffice.gov.uk/public/data/layer/wxobs/{LayerName}/{ImageFormat}?TIME={Time}Z&key={key}";
+			//http://datapoint.metoffice.gov.uk/public/data/layer/wxobs/RADAR_UK_Composite_Highres/png?TIME=2015-03-16T16:00:00Z&key=4b072cc5-a6bf-4d50-984f-b01c3907e78c
+			//layers: ATDNET_Sferics, SATELLITE_Infrared_Fulldisk, SATELLITE_Visible_N_Section, RADAR_UK_Composite_Highres
+			//src = src.replace("{LayerName}","RADAR_UK_Composite_Highres");
+			//src = src.replace("{ImageFormat}","png");
+			//src = src.replace("{Time}","2015-03-16T13:30:00");
+			//src = src.replace("{key}",APIKey);
+			//console.log("Radar URL: "+src);
+			//radarImageOverlay = new MapTubeImageOverlay(bounds,src,map);
+			//todo: need caps request first
+			//radarImageOverlay = new MapTubeAnimatedOverlay(bounds,src,map,"{Time}",
+			//	["2015-03-16T14:15:00", "2015-03-16T14:30:00", "2015-03-16T14:45:00","2015-03-16T15:00:00"]);
+			//var src = "http://datapoint.metoffice.gov.uk/public/data/layer/wxfcs/{LayerName}/{ImageFormat}?RUN={DefaultTime}Z&FORECAST={Timestep}&key={key}";
+			//src = src.replace("{LayerName}","Atlantic");
+			//src = src.replace("{ImageFormat}","png");
+			//src = src.replace("{DefaultTime}","2015-03-16T00:00:00");
+			//src = src.replace("{Timestep}","0");
+			//src = src.replace("{key}",APIKey);
+			//console.log("Forecast URL: "+src);
+			//var src = RadarRoot + "RADAR_UK_Composite_Highres_2013-10-27T131500Z.png"
+			//radarImageOverlay = new MapTube.ImageOverlay(bounds,src,map);
+			
+			radarImageOverlay = new MapTube.AnimatedOverlay(bounds,map);
+			radarImageOverlay.getImageUrl = function(d) {
+				return RadarRoot + "RADAR_UK_Composite_Highres_"
+				+d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())
+				+"T"+pad2(d.getHours())+pad2(d.getMinutes())+pad2(d.getSeconds())+"Z.png" };
+			radarImageOverlay.setFrameTime(StartTime);
+        }
+
+        google.maps.event.addDomListener(window, 'load', initializeMap);
+</script>
+<div id="map" style="width:500px;height:500px"></div>
+<button style="float:left" id="button1" onclick="javascript:myanimate()">&gt;</button>
+<div style="float:left;padding-left:2em" id="radardatetime">hello!</div>
+
+</body>
+</html>
